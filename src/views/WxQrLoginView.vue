@@ -13,11 +13,17 @@
 import { nextTick, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { mountWxLoginQr } from '@/utils/wxLogin'
+import { isSsoEnabled, redirectToSso } from '@/utils/ssoClient'
 
 const route = useRoute()
 const error = ref('')
 
 onMounted(() => {
+  if (isSsoEnabled(SSO_ENABLED) && SSO_HOST) {
+    redirectToSso(SSO_HOST, HOST, '/')
+    return
+  }
+
   const err = route.query.err
   if (typeof err === 'string') {
     if (err === 'no_admin') {

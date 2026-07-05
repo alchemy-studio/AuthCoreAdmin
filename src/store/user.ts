@@ -130,6 +130,24 @@ export default function useUser() {
     return { ok: false, error: 'union_id 登录失败' }
   }
 
+  async function complete_sso_login(ssoCode: string): Promise<LoginResult> {
+    authLog('complete_sso_login: POST sso/exchange')
+    store.loading = true
+    const { r, d, e, statusCode } = await request({
+      url: '/api/v1/uc/sso/exchange',
+      method: 'POST',
+      data: { code: ssoCode },
+      skipAuthHandler: true,
+    })
+    store.loading = false
+    authLog('complete_sso_login: response', { r, statusCode, hasToken: !!d, error: e })
+    if (r && d) {
+      saveToken(d)
+      return finalizeAdminLogin()
+    }
+    return { ok: false, error: typeof e === 'string' ? e : 'SSO 登录失败' }
+  }
+
   async function wx_login(code: string): Promise<LoginResult> {
     authLog('wx_login: POST wx_qr_login', { codePrefix: code.slice(0, 8) + '…' })
     store.loading = true
@@ -223,6 +241,7 @@ export default function useUser() {
     loginWithPassword,
     login,
     wx_login,
+    complete_sso_login,
     sudo,
     read,
     getAllUsers,

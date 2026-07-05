@@ -43,13 +43,16 @@ import { useRoute, useRouter } from 'vue-router'
 import useUser from '@/store/user'
 import { getToken } from '@/utils/index'
 import { authLog, authWarn, tokenSnapshot } from '@/utils/authLog'
+import { isSsoEnabled, redirectToSso } from '@/utils/ssoClient'
 
 const { store, read, logout, hasAdminAccess } = useUser()
 const route = useRoute()
 const router = useRouter()
 const initializing = ref(true)
 
-const isLoginPage = computed(() => route.name === 'login' || route.name === 'wx-login')
+const isLoginPage = computed(() =>
+  route.name === 'login' || route.name === 'wx-login' || route.name === 'auth-callback'
+)
 
 const navRoutes = [
   { path: '/users', name: '用户管理' },
@@ -79,6 +82,11 @@ onMounted(async () => {
 
   const token = getToken()
   if (!token) {
+    if (isSsoEnabled(SSO_ENABLED) && SSO_HOST) {
+      authLog('App bootstrap: no token → SSO', { ssoHost: SSO_HOST, app: HOST })
+      redirectToSso(SSO_HOST, HOST, route.fullPath)
+      return
+    }
     authWarn('App bootstrap: no token → /login')
     router.replace('/login')
     initializing.value = false

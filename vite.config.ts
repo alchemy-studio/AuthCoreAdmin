@@ -33,6 +33,8 @@ const config = {
   admin_allowed_role_keys: env.ADMIN_ALLOWED_ROLE_KEYS || 'ADMIN',
   login_mode: loginMode,
   enable_dev_unionid_login: env.ENABLE_DEV_UNIONID_LOGIN ?? (loginMode === 'password' ? 'true' : 'false'),
+  sso_host: env.SSO_HOST || '',
+  sso_enabled: env.SSO_ENABLED === 'true' || env.SSO_ENABLED === '1',
   base: env.VITE_BASE ?? fallback.base,
 }
 
@@ -53,6 +55,8 @@ export default defineConfig({
     ADMIN_ALLOWED_ROLE_KEYS: JSON.stringify(config.admin_allowed_role_keys),
     LOGIN_MODE: JSON.stringify(config.login_mode),
     ENABLE_DEV_UNIONID_LOGIN: JSON.stringify(config.enable_dev_unionid_login),
+    SSO_HOST: JSON.stringify(config.sso_host),
+    SSO_ENABLED: JSON.stringify(config.sso_enabled),
   },
   server: {
     port: 8011,

@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { authLog, authWarn, tokenSnapshot } from '@/utils/authLog'
+import { isSsoEnabled, redirectToSso } from '@/utils/ssoClient'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -15,6 +16,11 @@ const router = createRouter({
       path: '/wx-login',
       name: 'wx-login',
       component: () => import('@/views/WxLoginView.vue'),
+    },
+    {
+      path: '/auth/callback',
+      name: 'auth-callback',
+      component: () => import('@/views/AuthCallbackView.vue'),
     },
     {
       path: '/',
@@ -59,21 +65,24 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to) => {
   const token = window.localStorage.getItem('Authorization')
   authLog('router', {
-    from: from.fullPath,
     to: to.fullPath,
     name: to.name,
     hasToken: !!token,
     ...tokenSnapshot(),
   })
-  if (to.name !== 'login' && to.name !== 'wx-login' && !token) {
-    authWarn('router: blocked, no token → /login')
-    next('/login')
-  } else {
-    next()
+  if (to.name === 'login' || to.name === 'wx-login' || to.name === 'auth-callback' || token) {
+    return true
   }
+  if (isSsoEnabled(SSO_ENABLED) && SSO_HOST) {
+    authLog('router: no token → SSO', { ssoHost: SSO_HOST, app: HOST })
+    redirectToSso(SSO_HOST, HOST, to.fullPath)
+    return false
+  }
+  authWarn('router: blocked, no token → /login')
+  return '/login'
 })
 
 export default router

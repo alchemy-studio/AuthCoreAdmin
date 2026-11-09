@@ -79,7 +79,7 @@
                 v-if="item.union_id && hasAdminAccess()"
                 type="button"
                 class="inline-flex items-center gap-1.5 max-w-full px-2 py-0.5 rounded-full text-xs bg-purple-50 text-purple-700 cursor-pointer border-0"
-                @click.stop="toggleUnion(item.hty_id)"
+                @click.stop="toggleSecret(unionOpen, item.hty_id, item.union_id || '')"
               >
                 <span>unionid</span>
                 <span v-if="unionOpen.has(item.hty_id)" class="font-mono break-all text-left">{{ item.union_id }}</span>
@@ -110,6 +110,18 @@
             <div class="flex gap-2 text-xs mb-1">
               <span class="text-text-muted flex-shrink-0">用户名</span>
               <span class="break-all">{{ appUserName(info) }}</span>
+            </div>
+            <div v-if="info.openid" class="mb-1">
+              <button
+                v-if="hasAdminAccess()"
+                type="button"
+                class="inline-flex items-center gap-1.5 max-w-full px-2 py-0.5 rounded-full text-xs bg-sky-50 text-sky-700 cursor-pointer border-0 text-left"
+                @click.stop="toggleSecret(openidOpen, info.id, info.openid)"
+              >
+                <span>openid</span>
+                <span v-if="openidOpen.has(info.id)" class="font-mono break-all">{{ info.openid }}</span>
+              </button>
+              <span v-else class="inline-block px-2 py-0.5 rounded-full text-xs bg-sky-50 text-sky-700">openid</span>
             </div>
             <div class="flex gap-2 text-xs mb-1.5">
               <span class="text-text-muted flex-shrink-0">角色</span>
@@ -311,6 +323,7 @@ const flashMessage = ref('')
 const actionError = ref('')
 const openRows = ref(new Set<string>())
 const unionOpen = ref(new Set<string>())
+const openidOpen = ref(new Set<string>())
 const sortBy = ref<'name' | 'created_at' | 'status'>('name')
 const sortAsc = ref(true)
 
@@ -323,11 +336,35 @@ function toggleSort(field: 'name' | 'created_at' | 'status') {
   }
 }
 
-function toggleUnion(id: string) {
-  const s = unionOpen.value
-  if (s.has(id)) s.delete(id)
-  else s.add(id)
-  unionOpen.value = new Set(s)
+async function copyText(value: string) {
+  try {
+    await navigator.clipboard.writeText(value)
+  } catch {
+    const input = document.createElement('textarea')
+    input.value = value
+    input.setAttribute('readonly', '')
+    input.style.position = 'fixed'
+    input.style.left = '-9999px'
+    document.body.appendChild(input)
+    input.select()
+    const ok = document.execCommand('copy')
+    document.body.removeChild(input)
+    flashMessage.value = ok ? '已复制' : '复制失败'
+    return
+  }
+  flashMessage.value = '已复制'
+}
+
+function toggleSecret(open: typeof unionOpen, id: string, value: string) {
+  const next = new Set(open.value)
+  if (next.has(id)) {
+    next.delete(id)
+    open.value = next
+    return
+  }
+  next.add(id)
+  open.value = next
+  if (value) void copyText(value)
 }
 
 function toggleRow(id: string) {

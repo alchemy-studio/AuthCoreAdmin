@@ -22,6 +22,7 @@ export interface HtyUserApp {
   is_registered: boolean
   reject_reason?: string
   username?: string
+  meta?: { nickName?: string; avatarUrl?: string }
   roles: HtyRole[]
 }
 

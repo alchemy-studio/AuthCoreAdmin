@@ -75,7 +75,16 @@
                 item.enabled ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500']">
                 {{ item.enabled ? '账号已启用' : '账号未启用' }}
               </span>
-              <span v-if="item.union_id" class="inline-block px-2 py-0.5 rounded-full text-xs bg-purple-50 text-purple-700">unionid</span>
+              <button
+                v-if="item.union_id && hasAdminAccess()"
+                type="button"
+                class="inline-flex items-center gap-1.5 max-w-full px-2 py-0.5 rounded-full text-xs bg-purple-50 text-purple-700 cursor-pointer border-0"
+                @click.stop="toggleUnion(item.hty_id)"
+              >
+                <span>unionid</span>
+                <span v-if="unionOpen.has(item.hty_id)" class="font-mono break-all text-left">{{ item.union_id }}</span>
+              </button>
+              <span v-else-if="item.union_id" class="inline-block px-2 py-0.5 rounded-full text-xs bg-purple-50 text-purple-700">unionid</span>
               <span v-if="pendingInfos(item).length" class="inline-block px-2 py-0.5 rounded-full text-xs bg-orange-50 text-orange-800">
                 {{ pendingInfos(item).length }} 个应用待审
               </span>
@@ -100,13 +109,13 @@
             <div v-if="info.reject_reason" class="text-xs text-red-600 mb-1.5">驳回原因：{{ info.reject_reason }}</div>
             <div class="flex gap-2 text-xs mb-1">
               <span class="text-text-muted flex-shrink-0">用户名</span>
-              <span>{{ info.username || '-' }}</span>
+              <span class="break-all">{{ appUserName(info) }}</span>
             </div>
             <div class="flex gap-2 text-xs mb-1.5">
               <span class="text-text-muted flex-shrink-0">角色</span>
               <div class="flex gap-1 flex-wrap">
-                <span v-for="r in info.roles" :key="r.hty_role_id" class="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">{{ r.role_key }}</span>
-                <span v-if="!info.roles?.length" class="text-text-muted">-</span>
+                <span v-for="r in info.roles || []" :key="r.hty_role_id" class="px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded text-xs">{{ roleLabel(r) }}</span>
+                <span v-if="!(info.roles || []).length" class="text-text-muted">未分配</span>
               </div>
             </div>
             <div class="flex gap-1.5 mt-1 flex-wrap">
@@ -187,9 +196,9 @@ import useUser from '@/store/user'
 import request from '@/utils/request'
 import useRole from '@/store/role'
 import useApp from '@/store/app'
-import type { HtyUser, HtyUserApp } from '@/types'
+import type { HtyRole, HtyUser, HtyUserApp } from '@/types'
 
-const { store, getAllUsers, approveUser, rejectUser } = useUser()
+const { store, getAllUsers, approveUser, rejectUser, hasAdminAccess } = useUser()
 const { store: roleStore, fetchAll: fetchRoles } = useRole()
 const allRoles = computed(() => roleStore.list)
 const { store: appStore, fetchAll: fetchApps } = useApp()
@@ -201,6 +210,19 @@ const appNameMap = computed(() => {
   }
   return map
 })
+
+function appUserName(info: HtyUserApp): string {
+  const name = info.username?.trim()
+  if (name) return name
+  return info.meta?.nickName?.trim() || '-'
+}
+
+function roleLabel(role: HtyRole): string {
+  const name = role.role_name?.trim()
+  const key = role.role_key?.trim()
+  if (name && key && name !== key) return `${name}（${key}）`
+  return name || key || '-'
+}
 
 function pendingInfos(user: HtyUser): HtyUserApp[] {
   return (user.infos || []).filter((info) => !info.is_registered && !info.reject_reason)
@@ -288,6 +310,7 @@ const verifyingKey = ref('')
 const flashMessage = ref('')
 const actionError = ref('')
 const openRows = ref(new Set<string>())
+const unionOpen = ref(new Set<string>())
 const sortBy = ref<'name' | 'created_at' | 'status'>('name')
 const sortAsc = ref(true)
 
@@ -298,6 +321,13 @@ function toggleSort(field: 'name' | 'created_at' | 'status') {
     sortBy.value = field
     sortAsc.value = true
   }
+}
+
+function toggleUnion(id: string) {
+  const s = unionOpen.value
+  if (s.has(id)) s.delete(id)
+  else s.add(id)
+  unionOpen.value = new Set(s)
 }
 
 function toggleRow(id: string) {
